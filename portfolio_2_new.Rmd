@@ -1,9 +1,11 @@
 ---
 title: "Methods 4 -- Portfolio Assignment 2"
-output: html_notebook
-editor_options: 
+output:
+  html_document:
+    df_print: paged
+editor_options:
   chunk_output_type: inline
-  markdown: 
+  markdown:
     wrap: 72
 ---
 
@@ -218,7 +220,7 @@ the book a few times, and you can use this as inspiration.
 ```{r}
 
 set.seed(1)
-N= 10000
+N = 100000
 
 # Simulating variables:
 
@@ -226,20 +228,29 @@ N= 10000
 OCD <- sample(1:5, size=N, replace=TRUE, prob=c(.8, .10, .05, .03, .02))
 
 # Corona fear (assuming that it is normally distributed and dependent on OCD)
-corona_fear <-rnorm(N, mean=40+(5*OCD), sd=10) 
+corona_fear <-rnorm(N, mean=20+(10*OCD), sd=4) 
+hist(corona_fear)
 
 # Face mask (is dependent on corona_fear)
-face_mask <- rbinom(N, size =1, prob=inv_logit(scale(corona_fear)))
+face_mask <- rbinom(N, size =1, prob=inv_logit(scale(corona_fear*2)))
 plot(corona_fear, inv_logit(scale(corona_fear)), main= "Sigmoid plot: probability of wearing a face mask given corona fear")
 
 # Sanitizing (is dependent on corona_fear and OCD)
-sanitizing <-  rnorm(N, mean= (corona_fear-9)+(OCD_w*1.2), sd=2)
+sanitizing <-  rnorm(N, mean= (corona_fear-9)+(OCD*2), sd=2)
+hist(sanitizing)
+sanitizing_skrrt <-  rnorm(N, mean= (corona_fear-9), sd=2)
+hist(sanitizing_skrrt)
 
 # Germ level (is dependent on both sanitizing & whether you wear face mask or not)
 germ_level <-  rnorm(N, mean= 5000 - ((sanitizing*10)*(1+face_mask)), sd=100)
 
 # Probability of being infected (depends on your germ level)
 infected <-  rbinom(N, size= 1, prob= inv_logit(scale(germ_level)))
+#infected <- rnorm(N, mean=-0.8*germ_level+4200, sd = 2)
+plot(infected,germ_level)
+hist(infected)
+hist(germ_level)
+
 plot(germ_level, inv_logit(scale(germ_level)), main= "Sigmoid plot: probability of being infected given germ level")
 
 # creating df
@@ -519,6 +530,7 @@ As seen in the above plot, bInfected becomes independent from OCD (i.e., the mod
 
 OBS comment
 ```{r}
+
 m_backdoor<- quap(
     alist(
         infected_std ~ dnorm( mu , sigma ) , # (OBS ask Chris about standardizing dichotomous variable)
@@ -529,9 +541,6 @@ m_backdoor<- quap(
     ) , data = df )
 
 plot(coeftab(m_backdoor),by.model=TRUE)
-
-precis(m_backdoor)
-precis(m_no_backdoor)
 ```
 
 OBS comment
@@ -539,7 +548,7 @@ OBS comment
 m_no_backdoor<- quap(
     alist(
         infected_std ~ dnorm( mu , sigma ) , # (OBS ask Chris about standardizing dichotomous variable)
-        mu <- a + bCorona_fear*corona_fear_std + bOCD*OCD_std,# (OBS ask Chris about standardizing dichotomous variable)
+        mu <- a + bCorona_fear*corona_fear_std + bOCD*OCD,# (OBS ask Chris about standardizing dichotomous variable)
         a ~ dnorm( 0 , 0.2 ) ,
         bCorona_fear~ dnorm( 0 , 1 ),
         bOCD~ dnorm( 0 , 1 ),
@@ -549,6 +558,13 @@ m_no_backdoor<- quap(
 precis(m_no_backdoor)
 plot(coeftab(m_no_backdoor),by.model=TRUE)
 ```
+
+```{r}
+precis(m_backdoor)
+precis(m_no_backdoor) 
+```
+
+
 
 \- Try and deliberately **simulate some data that doesn't fit the DAG**,
 or **create a new DAG that doesn't fit the data**.
