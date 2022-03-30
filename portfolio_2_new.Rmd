@@ -212,12 +212,11 @@ corona_fear <-rnorm(N, mean=20+(10*OCD), sd=4)
 hist(corona_fear)
 
 # Social exposure (is dependent on corona_fear)
-social_exposure <- rnorm(N, meanlog=-(corona_fear*1.3))
-hist(social_exposure)
+social_exposure <- rnorm(N, mean= (35-(corona_fear/3)), sd= 1) #
 plot(corona_fear,social_exposure)
 
 # Sanitizing (is dependent on corona_fear and OCD)
-sanitizing <-  rnorm(N, mean= (corona_fear-9)+(OCD*2), sd=2)
+sanitizing <-  rnorm(N, mean= (corona_fear-8)+(OCD*2), sd=2)
 hist(sanitizing)
 sanitizing_skrrt <-  rnorm(N, mean= (corona_fear-9), sd=2)
 hist(sanitizing_skrrt)
