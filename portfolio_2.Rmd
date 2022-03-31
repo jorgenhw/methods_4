@@ -41,7 +41,7 @@ investigate the relation between. If in doubt, you **can be inspired by
 Peter's amazing example** on the next page.
 
 *In our example, we wish to investigate the effect of the predictor corona fear (CF) on*
-*the outcome variable Infected (a binary variable taking either the value 0 or 1)*
+*the outcome variable energy level (continuous)*
 
 *Since Denmark reported it's first case of COVID-19 contraction on the 27th February 2020 (STPS, 2020),* 
 *COVID-19 and its development has been subject to extensive coverage in Danish media.*
@@ -55,10 +55,11 @@ Peter's amazing example** on the next page.
 *COVID determines the precautions and actions one take to avoid getting infected.* 
 
 *Predictor: corona fear (continuous variable)* 
-*Outcome variable: infection (0/1)*
-*Sanitising: continuous variable* 
-*FM variable: do you wear face mask according to the national guidelines? (for the sake of simplicity, we assume that this is a binary variable taking either the value 0 or 1, meaning that you either always where a face mark when the guidelines advises you to do that (1) and never wear it in situations were the national guidelines advises it. We do acknowledge that is a false dichotomy)*
+*Outcome variable: energy level (continuous variable), depends on germ level as germs gobble up nutrients and energy.*
+*Sanitizing: continuous variable (count variable)* 
+*Social exposure: a measure of how much social mingling you engage in (social circle size, social activities etc.)* 
 *Germ level: the level of vira germs in your body. We have no biological evidence for a variable of this type, but for the sake of simplicity we assumes that the level of germs present in your body can be describes as a normally distributed continuous variable*
+
 
 \- **Make a DAG** for the phenomenon. Make it medium complicated: that
 means, make sure there are some different kinds of relations (see next
@@ -76,14 +77,14 @@ library(rethinking)
 dag_corona<- dagitty( "dag {
     corona_fear -> sanitizing;
     sanitizing-> germ_level;
-    face_mask -> germ_level;
-    corona_fear -> face_mask;
+    social_exposure -> germ_level;
+    corona_fear -> social_exposure;
     germ_level -> infected
 }")
 
 coordinates(dag_corona) <- list( 
-  x=c(corona_fear =0,face_mask =-1, sanitizing =0, germ_level=-1, infected= -1), 
-  y=c(corona_fear =0,face_mask =0, sanitizing = 1, germ_level=1, infected=2) )
+  x=c(corona_fear =0,social_exposure =-1, sanitizing =0, germ_level=-1, infected= -1), 
+  y=c(corona_fear =0,social_exposure =0, sanitizing = 1, germ_level=1, infected=2) )
 
 drawdag(dag_corona)
 ```
@@ -186,7 +187,7 @@ purpose*
 
 In order to shut the backdoor. Here's the recipe: (1) List all of the
 paths connecting X (the potential cause of interest) and Y (the out-
-come). (2) Classify each path by whether it is open or closed. A path is
+come). (2) Classify each path by whether i t is open or closed. A path is
 open unless it contains a collider. (3) Classify each path by whether it
 is a backdoor path. A backdoor path has an arrow entering X. (4) If
 there are any backdoor paths that are also open, decide which
@@ -324,7 +325,7 @@ OCD_w <- sample(1:5, size=N, replace=TRUE, prob=c(.8, .10, .05, .03, .02))
 corona_fear <-rnorm(N, mean=50+(0.05*OCD_w), sd=10) 
 
 # Face mask (is dependent on corona_fear)
-face_mask <- rbinom(N, size =1, prob=inv_logit(scale(corona_fear)))
+social_exposure <- rbinom(N, size =1, prob=inv_logit(scale(corona_fear)))
 plot(corona_fear, inv_logit(scale(corona_fear)), main= "Sigmoid plot: probability of wearing a face mask given corona fear")
 
 # Sanitizing (is dependent on corona_feat)
@@ -332,14 +333,14 @@ sanitizing <-  rnorm(N, mean= (corona_fear-20)+(OCD_w*1.2), sd=2) # OCD
 
 
 # Germ level (is dependent on both sanitizing & whether you wear face mask or not)
-germ_level <-  rnorm(N, mean= 5000 - ((sanitizing*10)*(1+face_mask)), sd=100)
+germ_level <-  rnorm(N, mean= 5000 - ((sanitizing*10)*(1+social_exposure)), sd=100)
 
 # Probability of being infected (depends on your germ level)
 infected <-  rbinom(N, size= 1, prob= inv_logit(scale(germ_level)))
 plot(germ_level, inv_logit(scale(germ_level)), main= "Sigmoid plot: probability of being infected given germ level")
 
 # creating df
-df <- tibble(germ_level, sanitizing, infected, face_mask, corona_fear) 
+df <- tibble(germ_level, sanitizing, infected, social_exposure, corona_fear) 
 ```
 
 *Standardizing variables*
@@ -347,7 +348,7 @@ Standardizing variables: OBS CHRIS: SHOULD WE STANDARDIZE A DICHOTOMOUS VARIABLE
 ```{r}
 
 df <- df %>% 
-  mutate(germ_std=scale(germ_level),sanitizing_std= scale(sanitizing),  infected_std=scale(infected),face_mask_std=scale(face_mask), corona_fear_std= scale(corona_fear))
+  mutate(germ_std=scale(germ_level),sanitizing_std= scale(sanitizing),  infected_std=scale(infected),social_exposure_std=scale(social_exposure), corona_fear_std= scale(corona_fear))
 
 #ls.str(df)
 ```
@@ -362,12 +363,12 @@ by the DAG, the data and the DAG doesn't fit).
 
 ### Testing the conditional independencies
 Model 1: crn_ _||_ grm_ | fc_m, sntz. 
-Testing whether the causal coefficient germ_level is insignificant when stratifying by face_mask and sanitizing. 
+Testing whether the causal coefficient germ_level is insignificant when stratifying by social_exposure and sanitizing. 
 ```{r}
 m1<- quap(
     alist(
         corona_fear_std ~ dnorm( mu , sigma ) ,
-        mu <- a  + bGermLevel*germ_std + bFaceMask*face_mask_std + bSanitizing*sanitizing_std,
+        mu <- a  + bGermLevel*germ_std + bFaceMask*social_exposure_std + bSanitizing*sanitizing_std,
         a ~ dnorm( 0 , 0.2 ) ,
         bGermLevel~ dnorm( 0 , 1 ),
         bFaceMask~ dnorm( 0 , 1 ) ,
@@ -377,7 +378,7 @@ m1<- quap(
 
 plot(coeftab(m1),by.model=TRUE )
 ```
-As seen in the above plot, corona fear and germ level becomes independent (i.e., the model with almost no uncertainty estimates the coefficient bGermLevel to be very close to zero ) when stratifying by face_mask and sanitizing. 
+As seen in the above plot, corona fear and germ level becomes independent (i.e., the model with almost no uncertainty estimates the coefficient bGermLevel to be very close to zero ) when stratifying by social_exposure and sanitizing. 
 
 
 Model 2: crn_ _||_ infc | grm_
@@ -401,13 +402,13 @@ As seen in the above plot, corona fear and infected becomes independent (i.e., t
 
 
 Model 3: crn_ _||_ infc_ | fc_m, sntz
-Testing whether the causal coefficient bInfected is insignificant when stratifying by face_mask and sanitizing. 
+Testing whether the causal coefficient bInfected is insignificant when stratifying by social_exposure and sanitizing. 
 ```{r}
 
 m3 <- quap(
     alist(
         corona_fear_std ~ dnorm( mu , sigma ) ,
-        mu <- a + bInfected * infected_std  + bFaceMask * face_mask_std + bSanitizing * sanitizing_std,
+        mu <- a + bInfected * infected_std  + bFaceMask * social_exposure_std + bSanitizing * sanitizing_std,
         a ~ dnorm( 0 , 0.2 ) ,
         bInfected ~ dnorm( 0 , 1 ),
         bFaceMask ~ dnorm( 0, 1 ),
@@ -418,16 +419,16 @@ m3 <- quap(
 
 plot(coeftab(m3),by.model=TRUE )
 ```
-As seen in the above plot, bInfected becomes independent (i.e., the model does with almost no uncertainty estimate the coefficient bInfected to be very close to zero) when stratifying by face_mask and sanitizing. 
+As seen in the above plot, bInfected becomes independent (i.e., the model does with almost no uncertainty estimate the coefficient bInfected to be very close to zero) when stratifying by social_exposure and sanitizing. 
 
 
 Model 4: fc_m _||_ infc_ | grm_
-Testing whether the causal coefficient infc (being infected or not) significantly close to zero when stratifying by germ_level in a model that has face_mask as outcome variable.
+Testing whether the causal coefficient infc (being infected or not) significantly close to zero when stratifying by germ_level in a model that has social_exposure as outcome variable.
 ```{R} 
 
 m4 <- quap(
     alist(
-        face_mask_std ~ dnorm( mu , sigma ) ,
+        social_exposure_std ~ dnorm( mu , sigma ) ,
         mu <- a + bInfected*infected_std  + bGermLevel*germ_std,
         a ~ dnorm( 0 , 0.2 ) ,
         bInfected ~ dnorm( 0 , 1 ) ,
@@ -441,12 +442,12 @@ plot(coeftab(m4),by.model=TRUE)
 As seen in the above plot, bGermLevel becomes independent (i.e., the model does with almost no uncertainty estimate the coefficient bInfected to be very close to zero) when stratifying by germ level.
 
 Model 5: fc_m _||_ sntz | crn_
-Testing whether the causal coefficient of sanitizing becomes significantly close to zero when stratifying by corona fear in a model that has face_mask as outcome variable.
+Testing whether the causal coefficient of sanitizing becomes significantly close to zero when stratifying by corona fear in a model that has social_exposure as outcome variable.
 ```{R} 
 
 m5 <- quap(
     alist(
-        face_mask ~ dnorm( mu , sigma ) ,
+        social_exposure ~ dnorm( mu , sigma ) ,
         mu <- a + bSanitizing*sanitizing_std  + bCoronaFear*corona_fear_std,
         a ~ dnorm( 0 , 0.2 ) ,
         bSanitizing ~ dnorm( 0 , 1 ) ,
@@ -493,15 +494,15 @@ twisted_dag_corona <- dagitty( "dag {
     sanitizing-> germ_level
     OCD -> sanitizing
     OCD -> corona_fear
-    face_mask -> germ_level
-    corona_fear -> face_mask
+    social_exposure -> germ_level
+    corona_fear -> social_exposure
     germ_level -> infected
 }")
 
 # Plotting the DAG
 coordinates(twisted_dag_corona) <- list( 
-  x=c(corona_fear =0, OCD = .3, face_mask =-.5, sanitizing =0, germ_level=-.5, infected= -.5) , 
-  y=c(corona_fear =0, OCD = .5, face_mask =0, sanitizing = 1, germ_level=1, infected=2) )
+  x=c(corona_fear =0, OCD = .3, social_exposure =-.5, sanitizing =0, germ_level=-.5, infected= -.5) , 
+  y=c(corona_fear =0, OCD = .5, social_exposure =0, sanitizing = 1, germ_level=1, infected=2) )
 
 drawdag(twisted_dag_corona)
 
@@ -523,13 +524,13 @@ or **create a new DAG that doesn't fit the data**.
 corona_fear_w <-rnorm(N, mean=50, sd=10)
 
 # Face mask (depending on germ level)
-face_mask_w <- rbinom(N, size =1, prob= inv_logit(scale(germ_level)))
+social_exposure_w <- rbinom(N, size =1, prob= inv_logit(scale(germ_level)))
 
 # Sanitizing (depending on germ_level)
 sanitizing_w <- rnorm(N, mean= germ_level-20, sd=2)
 
 # Germ level (depending on corona fear and face mask)
-germ_level_w <-  rnorm(N, mean= 5000 - ((corona_fear*10)*(1+face_mask)), sd=100)
+germ_level_w <-  rnorm(N, mean= 5000 - ((corona_fear*10)*(1+social_exposure)), sd=100)
 
 # Infected (not depending on any of the variables)
 infected_w <-  rbinom(N, size= 1, prob=0.2)
@@ -539,7 +540,7 @@ infected_w <-  rbinom(N, size= 1, prob=0.2)
 OCD_w <- sample(1:5, size=N, replace=TRUE, prob=c(.8, .10, .05, .03, .02)) # 80% of not having OCD, apx. 2% chance for severe OCD
 
 # creating df
-df_w <- tibble(germ_level_w, sanitizing_w, infected_w, face_mask_w, corona_fear_w, OCD_w) 
+df_w <- tibble(germ_level_w, sanitizing_w, infected_w, social_exposure_w, corona_fear_w, OCD_w) 
 
 
 
@@ -549,7 +550,7 @@ df_w <- tibble(germ_level_w, sanitizing_w, infected_w, face_mask_w, corona_fear_
 ```{r}
 
 df_w <- df_w %>% 
-  mutate(germ_std_w=scale(germ_level_w),sanitizing_std_w= scale(sanitizing_w),  infected_std_w=scale(infected_w),face_mask_std_w=scale(face_mask_w), corona_fear_std_w= scale(corona_fear_w), OCD_std_w = scale(OCD_w))
+  mutate(germ_std_w=scale(germ_level_w),sanitizing_std_w= scale(sanitizing_w),  infected_std_w=scale(infected_w),social_exposure_std_w=scale(social_exposure_w), corona_fear_std_w= scale(corona_fear_w), OCD_std_w = scale(OCD_w))
 
 ```
 
@@ -578,7 +579,7 @@ example)
 model1_w <- quap(
     alist(
         OCD_std_w ~ dnorm( mu , sigma ) ,
-        mu <- a + bFaceMask*face_mask_std_w + bCoronaFear*corona_fear_std_w,
+        mu <- a + bFaceMask*social_exposure_std_w + bCoronaFear*corona_fear_std_w,
         a ~ dnorm( 0 , 0.2 ) ,
         bCoronaFear ~ dnorm( 0 , 0.5 ) ,
         bFaceMask ~ dnorm( 0 , 0.5 ) ,
@@ -595,7 +596,7 @@ plot(precis( model1_w ))
 model2_w <- quap(
     alist(
         OCD_std_w ~ dnorm( mu , sigma ) ,
-        mu <- a + bGermLevel*germ_std_w + bFaceMask*face_mask_std_w + bSanitize*sanitizing_std_w ,
+        mu <- a + bGermLevel*germ_std_w + bFaceMask*social_exposure_std_w + bSanitize*sanitizing_std_w ,
         a ~ dnorm( 0 , 0.2 ) ,
         bGermLevel ~ dnorm( 0 , 0.5 ) ,
         bFaceMask ~ dnorm( 0 , 0.5 ) ,
@@ -645,10 +646,10 @@ plot(coeftab(model4_w),by.model=TRUE )
 model5_w<- quap(
     alist(
         OCD_std_w ~ dnorm( mu , sigma ) ,
-        mu <- a + bInfected*infected_std_w  + bFace_mask*face_mask_std_w + bSanitizing*sanitizing_std_w,
+        mu <- a + bInfected*infected_std_w  + bsocial_exposure*social_exposure_std_w + bSanitizing*sanitizing_std_w,
         a ~ dnorm( 0 , 0.2 ) ,
         bInfected~ dnorm( 0 , 1 ) ,
-        bFace_mask~ dnorm( 0 , 1 ),
+        bsocial_exposure~ dnorm( 0 , 1 ),
         bSanitizing~ dnorm( 0 , 1 ),
         sigma ~ dexp( 1 )
     ) , data = df_w )
@@ -661,7 +662,7 @@ plot(precis(model5_w))
 model6_w<- quap(
     alist(
         OCD_std_w ~ dnorm( mu , sigma ) ,
-        mu <- a + bInfected*infected_std_w  + bCorona_fear*corona_fear_std_w + bSanitizing*sanitizing_std_w,
+        mu <- a + benergylvl*infected_std_w  + bCorona_fear*corona_fear_std_w + bSanitizing*sanitizing_std_w,
         a ~ dnorm( 0 , 0.2 ) ,
         bInfected~ dnorm( 0 , 1 ) ,
         bCorona_fear~ dnorm( 0 , 1 ),
