@@ -1,6 +1,7 @@
 ---
-title: "Methods 4 -- Portfolio Assignment 2"
+title: "Methods 4 -- Portfolio Assignment 2, Study Group 3"
 output:
+  pdf_document: default
   html_document:
     df_print: paged
 editor_options:
@@ -39,6 +40,7 @@ pacman::p_load(usethis,dplyr, tidyverse, ggplot2, rstan, dagitty,ggdag)
 library(rethinking)
 ```
 
+# Portfolio 2: Study Group 3
 ## Task 1: The DAG
 
 \- **Come up with an** incredibly interesting and scientifically
@@ -442,9 +444,8 @@ As seen in the above plot, social exposure becomes independent from OCD (i.e., t
 *The posterior mean for social exposure (bSoExp) is very close to 0 (.05) with very little probability of both sides of zero. This does not violate the implication that social exposure becomes independent from OCD when stratifying by corona fear.*
 
 
-
 Model 7: crn_ || enrg | grm_
-Testing whether the causal coefficient energy level becomes significantly close to zero when stratifying by germ level in a model that has corona fear as outcome variable.
+*Testing the implication that the causal coefficient energy level becomes significantly close to zero when stratifying by germ level in a model that has corona fear as outcome variable.*
 
 ```{r}
 adjustmentSets(dag_corona,exposure="energylvl", outcome="corona_fear") #crn_ _||_ enrg | grm_
@@ -459,14 +460,17 @@ m7<- quap(
         sigma ~ dexp( 1 )
     ) , data = df )
 
+precis(m7)
 plot(coeftab(m7),by.model=TRUE )
 
 ```
-As seen in the above plot, corona fear and energy level becomes independent (i.e., the model with almost no uncertainty estimates the coefficient bEnergyLevel to be very close to zero ) when stratifying by germ level. 
+*The plot above shows the posterior mean for our model's parameters sigma, bGermlvl, bEnergyLvl and our intercept, alpha (a). The posterior means are shown by the points and the 89% compatibility intervals are shown by the solid horizontal lines. We can interpret the posterior mean of the parameter bEnergyLvl as: once we know a person's germ level, there is no additional predictive power in also knowing the person's energy level*. 
+
+*The posterior mean for energy level (bEnergyLvl) is -0.2 with very little probability of both sides of zero. This does not violate the implication that energy level becomes independent from corona fear when stratifying by germ level.*
 
 
 Model 8: crn_ || enrg | sntz, scl_
-Testing whether the causal coefficient energy level becomes significantly close to zero when stratifying by sanitizing and social exposure in a model that has corona fear as outcome variable.
+*Testing the implication that the causal coefficient energy level becomes significantly close to zero when stratifying by sanitizing and social exposure in a model that has corona fear as outcome variable.*
 
 ```{r}
 adjustmentSets(dag_corona,exposure="energylvl", outcome="corona_fear") #crn_ _||_ enrg | grm_
@@ -482,67 +486,91 @@ m8<- quap(
         sigma ~ dexp( 1 )
     ) , data = df )
 
+precis(m8)
 plot(coeftab(m8),by.model=TRUE )
 
 ```
-As seen in the above plot, corona fear and energy level becomes independent (i.e., the model confidently estimates the coefficient bEnergyLvl (energy level) to be very close to zero) when stratifying by social exposure and sanitizing.
+*The plot above shows the posterior mean for our model's parameters sigma, bSoExp, bEnergyLvl, bSanitizing and our intercept, alpha (a). The posterior means are shown by the points and the 89% compatibility intervals are shown by the solid horizontal lines. We can interpret the posterior mean of the parameter bEnergyLvl as: once we know a person's sanitizing and social exposure level, there is no additional predictive power in also knowing the person's energy level. *
+
+*The posterior mean for energy level (bEnergy) is 0 with very little probability of both sides of zero. This does not violate the implication that energy level becomes independent from corona fear when stratifying by social exposure and sanitizing*
+
 
 Model 9:  crn_ _||_ grm_ | sntz, scl_
-Testing whether the causal coefficient for germ level becomes significantly close to zero when stratifying by sanitizing and social exposure in a model that has corona fear as outcome variable.
+*Testing the implication that the causal coefficient for germ level becomes significantly close to zero when stratifying by sanitizing and social exposure in a model that has corona fear as outcome variable.*
 ```{r}
+adjustmentSets(dag_corona,exposure="germ_level", outcome="corona_fear") # No extra to add
+
 m9 <- quap(
     alist(
         corona_fear_std ~ dnorm( mu , sigma ) ,
-        mu <- a + bGermlvl * germ_std  + bSanitizing * sanitizing_std + bSocial_exp * social_exposure_std + bOCD*OCD_std,
+        mu <- a + bGermlvl * germ_std  + bSanitizing * sanitizing_std + bSocial_exp * social_exposure_std,
         a ~ dnorm( 0 , 0.2 ) ,
         bGermlvl ~ dnorm( 0 , 1 ),
         bSanitizing~ dnorm( 0 , 1 ),
         bSocial_exp~ dnorm( 0 , 1 ),
-        bOCD ~ dnorm( 0, 1 ),
         sigma ~ dexp( 1 )
     ) , data = df )
 
+precis(m9)
 plot(coeftab(m9),by.model=TRUE )
 ```
-As seen in the above plot, bGermlvl becomes independent from corona fear (i.e., the model does with almost no uncertainty estimate the coefficient bGermlvl to be very close to zero) when stratifying by sanitizing and social exposure.
+*The plot above shows the posterior mean for our model's parameters sigma, bSocial_exp, bSanitizing, bGermlvl, and our intercept, alpha (a). The posterior means are shown by the points and the 89% compatibility intervals are shown by the solid horizontal lines. We can interpret the posterior mean of the parameter bGermlvl as: once we know a person's sanitizing and social exposure level, there is no additional predictive power in also knowing the person's germ level. *
 
-Model 10: enrg _||_ sntz | grm_
-Testing whether the causal coefficient for sanitizing becomes significantly close to zero when stratifying by germ level in a model that has energy level as outcome variable.
+*The posterior mean for germ level (bGermlvl) is 0.04 with very little probability of both sides of zero. This does not violate the implication that germ level becomes independent from corona fear when stratifying by sanitizing and social exposure*
+
+Model 10: enrg _||_ sntz | grm_ 
+*Testing the implication that the causal coefficient for sanitizing becomes significantly close to zero when stratifying by germ level in a model that has energy level as outcome variable.*
 ```{R} 
+adjustmentSets(dag_corona,exposure="sanitizing", outcome="energylvl") # Adding Corona Fear
+
+
 m10 <- quap(
     alist(
         energylvl_std ~ dnorm( mu , sigma ) ,
-        mu <- a + bSanitizing*sanitizing_std + bGermLevel*germ_std,
+        mu <- a + bSanitizing*sanitizing_std + bGermLevel*germ_std + bCoronaFear * corona_fear_std,
         a ~ dnorm( 0 , 0.2 ) ,
         bSanitizing ~ dnorm( 0 , 1 ) ,
         bGermLevel~ dnorm( 0 , 1 ),
+        bCoronaFear ~ dnorm( 0 , 1 ),
         sigma ~ dexp( 1 )
     ) , data = df )
 
+precis(m10)
 plot(coeftab(m10),by.model=TRUE)
 ```
-As seen in the above plot, bSanitizing becomes independent from energy level (i.e., the model does with almost no uncertainty estimate the coefficient bSanitizing to be very close to zero) when stratifying by germ level.
+*The plot above shows the posterior mean for our model's parameters sigma, bCoronaFear, bGermLevel, bSanitizing and our intercept, alpha (a). The posterior means are shown by the points and the 89% compatibility intervals are shown by the solid horizontal lines. We can interpret the posterior mean of the parameter bSanitizing as: once we know a person's germ level and corona fear, there is no additional predictive power in also knowing the person's sanitizing level. *
 
-Model 11:  enrg _||_ scl_ | grm_
-Testing whether the causal coefficient for social exposure becomes significantly close to zero when stratifying by germ level in a model that has energy level as outcome variable.
-```{R} 
+*The posterior mean for sanitizing (bSanitizing) is -0.06 with very little probability of both sides of zero. This does not violate the implication that sanitizing becomes independent from energy level when stratifying by germ level and corona fear.*
+
+
+Model 11:  enrg _||_ scl_ | grm_ 
+*Testing the implication that the causal coefficient for social exposure becomes significantly close to zero when stratifying by germ level in a model that has energy level as outcome variable.*
+```{r} 
+adjustmentSets(dag_corona,exposure="social_exposure", outcome="energylvl") # Adding Corona Fear
+
 m11 <- quap(
     alist(
         energylvl_std ~ dnorm( mu , sigma ) ,
-        mu <- a + bSocial_exp*social_exposure_std  + bGermlvl*germ_std,
+        mu <- a + bSocial_exp*social_exposure_std  + bGermlvl*germ_std + bCoronaFear*corona_fear_std,
         a ~ dnorm( 0 , 0.2 ) ,
         bSocial_exp ~ dnorm( 0 , 1 ) ,
         bGermlvl~ dnorm( 0 , 1 ),
+        bCoronaFear ~ dnorm( 0 , 1 ),
         sigma ~ dexp( 1 )
     ) , data = df )
-
+precis(m11)
 plot(coeftab(m11),by.model=TRUE)
 ```
-As seen in the above plot, bSocial_exp becomes independent from energy level (i.e., the model does with almost no uncertainty estimate the coefficient bSocial_exp to be very close to zero) when stratifying by germ level.
+*The plot above shows the posterior mean for our model's parameters sigma, bSocial_exp, bGermlvl, bCoronaFear and our intercept, alpha (a). The posterior means are shown by the points and the 89% compatibility intervals are shown by the solid horizontal lines. We can interpret the posterior mean of the parameter bSocial_exp as: once we know a person's germ level and corona fear, there is no additional predictive power in also knowing the person's social exposure level. *
+
+*The posterior mean for social exposure (bSocial_exp) is 0.03 with very little probability of both sides of zero. This does not violate the implication that social exposure becomes independent from energy level when stratifying by germ level and corona fear.*
+
 
 Model 12: sntz _||_ scl_ | crn_
-Testing whether the causal coefficient for social exposure becomes significantly close to zero when stratifying by corona fear in a model that has sanitizing as outcome variable.
+*Testing the implication that the causal coefficient for social exposure becomes significantly close to zero when stratifying by corona fear in a model that has sanitizing as outcome variable.*
 ```{R} 
+adjustmentSets(dag_corona,exposure="social_exposure", outcome="sanitizing")
+
 m12 <- quap(
     alist(
         sanitizing_std ~ dnorm( mu , sigma ) ,
@@ -553,21 +581,21 @@ m12 <- quap(
         sigma ~ dexp(1)
     ) , data = df )
 
+precis(m12)
 plot(coeftab(m12),by.model=TRUE)
 ```
-As seen in the above plot, bSocial_exp becomes independent from sanitizing (i.e., the model does with almost no uncertainty estimate the coefficient bSocial_exp to be very close to zero) when stratifying by corona fear.
+*The plot above shows the posterior mean for our model's parameters sigma, bSocial_exp, bCorona_fear and our intercept, alpha (a). The posterior means are shown by the points and the 89% compatibility intervals are shown by the solid horizontal lines. We can interpret the posterior mean of the parameter bSocial_exp as: once we know a person's corona fear, there is no additional predictive power in also knowing the person's social exposure. *
 
-
-
+*The posterior mean for social exposure (bSocial_exp) is 0.04 with a standard deviation of 0.02. This does not violate the implication that social exposure becomes independent from sanitizing when stratifying by corona fear.*
 
 
 ## Task 4: Messing it up
 
 \- Try and **deliberately have an open back door path** and see if you can get wrong inference.
 
-*We know that we will get wrong inference if we donøt include OCD in our model*.
-*Not including OCD in the model results in a different estimate of the level of corona fear's influence on the chance of whether you get energylvl or not, that is zero influence of corona fear on influence.*
-*Contrarily, including OCD in the model and thus closing the backdoor*
+*We know that we will get wrong inference if we don't include OCD in our model*.
+*Not including OCD in the model results in a different estimate of the level of corona fear's influence on energy level.*
+*Contrarily, including OCD in the model and thus closing the backdoor will allow  us to estimate the total causal effect that corona fear has on energy level.*
 
 
 ```{r}
@@ -582,7 +610,8 @@ m_nobackdoor <- quap(
         sigma ~ dexp(1)
     ) , data = df )
 
-plot(coeftab(m6),by.model=TRUE) # bCorona_fear coef around 0.3
+precis(m_nobackdoor)
+plot(coeftab(m_nobackdoor),by.model=TRUE) # bCorona_fear coef around 0.3
 
 
 # Model with open back door 
@@ -595,18 +624,20 @@ m_backdoor <- quap(
         sigma ~ dexp(1)
     ) , data = df )
 
+precis(m_backdoor)
 plot(coeftab(m_backdoor),by.model=TRUE) # bCorona_fear coef around 0.5
 
 ```
 
-When comparing the plots of the two models above, it becomes clear that having an open back door path makes the causal effect that corona fear has on energy level appear stronger than it actually is. Closing the backdoor path results in an estimated posterior mean of the corona fear coefficient around 0.3. Having an open backdoor path results in an estimated posterior mean of apx. 0.5, thus making it look as if the effect is bigger than it actually is. This is due to OCD being a confound that affects energy level through a front door path via corona fear, but also as a back door path via sanitizing.
+*When comparing the plots of the two models above, it becomes clear that having an open back door path makes the causal effect that corona fear has on energy level appear stronger than it actually is. Closing the backdoor path results in an estimated posterior mean of the corona fear coefficient around 0.3. Having an open backdoor path results in an estimated posterior mean of apx. 0.5, thus making it look as if the effect is bigger than it actually is. This is due to OCD being a confound that affects energy level through a front door path via corona fear, but also as a back door path via sanitizing.*
 
 
 \- Try and deliberately **simulate some data that doesn't fit the DAG**,
 or **create a new DAG that doesn't fit the data**.
 
-\- Use the same approach as above to show that the DAG is wrong (by showing that conditional independencies don't exist in the data, for example).
+*We'll now simulate some data that doesn't fit our DAG. Then we'll run the exact same tests of conditional independencies, now using the wrong data. We expect that several of the implications of our DAG will be violated as a result of our data simply not fitting the DAG. We'll run the exact same models as above, but only include the code output of those violated.*
 
+\- Use the same approach as above to show that the DAG is wrong (by showing that conditional independencies don't exist in the data, for example).
 
 ```{r}
 
@@ -621,19 +652,15 @@ corona_fear_w <-rnorm(N, mean=50, sd=10)
 
 # Social exposure (is dependent on corona_fear)
 social_exposure_w <- rnorm(N, mean= (35+(energylvl*3)), sd= 1) #
-plot(corona_fear_w,social_exposure_w)
 
 # Sanitizing (is dependent on corona_fear and OCD)
 sanitizing_w <-  rnorm(N, mean= (social_exposure_w/15), sd=2)
-hist(sanitizing_w)
 
 # Probability of being energylvl (depends on your germ level)
 energylvl_w <-rnorm(N, mean=50-((social_exposure_w/100)), sd=1) 
-hist(energylvl_w)
 
 # Germ level (is dependent on both sanitizing & whether you wear face mask or not)
 germ_level_w <-  rnorm(N, mean= 4600 - ((energylvl_w*15)), sd=100)
-hist(germ_level_w)
 
 
 # creating df
@@ -657,9 +684,7 @@ df_w <- df_w %>%
 
 
 Wrong model 1: OCD _||_ enrg | germ
-Testing whether the causal coefficient of energy_level becomes significantly close to zero when stratifying by germ level in a model that has OCD as outcome variable. 
-
-```{r}
+```{r, results = FALSE}
 
 adjustmentSets(dag_corona,exposure="OCD", outcome="energylvl") 
 
@@ -674,15 +699,12 @@ m1_w <- quap(
     ) , data = df_w )
 
 plot(coeftab(m1_w),by.model=TRUE)
-
 ```
-As seen in the above plot, energy level becomes independent from OCF (i.e., the model does with almost no uncertainty estimate the coefficient bEng to be very close to zero) when stratifying by germ level.
+
 
 
 Wrong model 2:  OCD _||_ enrg | sntz, scl_
-
-Testing whether the causal coefficient of energy level becomes significantly close to zero when stratifying by sanitizing and social exposure in a model that has OCD as outcome variable. 
-```{r}
+```{r, results = FALSE}
 
 adjustmentSets(dag_corona,exposure="energylvl", outcome="OCD") # choosing { sanitizing, social_exposure }
 
@@ -701,13 +723,11 @@ plot(coeftab(m2_w),by.model=TRUE)
 precis(m2_w)
 
 ```
-As seen in the above plot, energy level becomes independent from OCF (i.e., the model does with almost no uncertainty estimate the coefficient bEng to be very close to zero) when stratifying by energy level, social exposure and 
 
 
 
 Wrong model 3:  OCD _||_ enrg | crn_, sntz
-Testing whether the causal coefficient of energy level becomes significantly close to zero when stratifying by corona fear and sanitizing in a model that has OCD as outcome variable.
-```{r}
+```{r, results = FALSE}
 
 adjustmentSets(dag_corona,exposure="energylvl", outcome="OCD") # { corona_fear, sanitizing }
 
@@ -726,12 +746,9 @@ m3_w<- quap(
 plot(coeftab(m3_w),by.model=TRUE)
 
 ```
-As seen in the above plot, bEng becomes independent from OCD (i.e., the model does with almost no uncertainty estimate the coefficient bEng to be very close to zero) when stratifying by sanitizing and corona fear.
-
 
 Wrong model 4:  OCD _||_ grm_ | sntz, scl_
-Testing whether the causal coefficient of germ level becomes significantly close to zero when stratifying by sanitizing and social exposure in a model that has OCD as outcome variable.
-```{r}
+```{r, results = FALSE}
 
 m4_w <- quap(
     alist(
@@ -747,13 +764,9 @@ m4_w <- quap(
 plot(coeftab(m4_w),by.model=TRUE)
 
 ```
-As seen in the above plot, benergylvl becomes independent from OCD when stratifying by germ level. That is, given the data and our model, posterior mean seems to be pretty close to zero. 
-
 
 Wrong Model 5: OCD || grm_ | crn_, sntz
-Testing whether the causal coefficient of germ level becomes significantly close to zero when stratifying by corona fear and sanitizing in a model that has OCD as outcome variable.
-
-```{r}
+```{r, results = FALSE}
 adjustmentSets(dag_corona,exposure="germ_level", outcome="OCD") # OCD _||_ grm_ | crn_, sntz
 
 m5_w <-  quap(
@@ -769,14 +782,9 @@ m5_w <-  quap(
 
 plot(coeftab(m5_w),by.model=TRUE)
 ```
-As seen in the above plot, germ level becomes independent from OCD (i.e., the model does with almost no uncertainty estimate the coefficient bGerm (germ level) to be very close to zero) when stratifying by face corona fear and sanitizing.
-
-
 
 Wrong Model 6:OCD || scl_ | crn_
-Testing whether the causal coefficient of social exposure becomes significantly close to zero when stratifying by corona fear in a model that has OCD as outcome variable.
-
-```{r}
+```{r, results = FALSE}
 adjustmentSets(dag_corona,exposure="social_exposure", outcome="OCD") #OCD _||_ scl_ | crn_
 
 m6_w<- quap(
@@ -792,13 +800,8 @@ m6_w<- quap(
 plot(coeftab(m6_w),by.model=TRUE)
 ```
 
-As seen in the above plot, social exposure becomes independent from OCD (i.e., the model does with almost no uncertainty estimate the coefficient bSoExp (social exposure) to be very close to zero) when stratifying by corona fear. 
-
-
 Wrong Model 7: crn_ || enrg | grm_
-Testing whether the causal coefficient energy level becomes significantly close to zero when stratifying by germ level in a model that has corona fear as outcome variable.
-
-```{r}
+```{r, results = FALSE}
 adjustmentSets(dag_corona,exposure="energylvl", outcome="corona_fear") #crn_ _||_ enrg | grm_
 
 m7_w<- quap(
@@ -814,13 +817,9 @@ m7_w<- quap(
 plot(coeftab(m7_w),by.model=TRUE )
 
 ```
-As seen in the above plot, corona fear and energy level becomes independent (i.e., the model with almost no uncertainty estimates the coefficient bEnergyLevel to be very close to zero ) when stratifying by germ level. 
-
 
 WrongModel 8: crn_ || enrg | sntz, scl_
-Testing whether the causal coefficient energy level becomes significantly close to zero when stratifying by sanitizing and social exposure in a model that has corona fear as outcome variable.
-
-```{r}
+```{r, results = FALSE}
 adjustmentSets(dag_corona,exposure="energylvl", outcome="corona_fear") #crn_ _||_ enrg | grm_
 
 m8_w<- quap(
@@ -837,11 +836,9 @@ m8_w<- quap(
 plot(coeftab(m8_w),by.model=TRUE )
 
 ```
-As seen in the above plot, corona fear and energy level becomes independent (i.e., the model confidently estimates the coefficient bEnergyLvl (energy level) to be very close to zero) when stratifying by social exposure and sanitizing.
 
 Wrong model 9:  crn_ _||_ grm_ | sntz, scl_
-Testing whether the causal coefficient for germ level becomes significantly close to zero when stratifying by sanitizing and social exposure in a model that has corona fear as outcome variable.
-```{r}
+```{r, results = FALSE}
 m9_w <- quap(
     alist(
         corona_fear_std_w ~ dnorm( mu , sigma ) ,
@@ -856,10 +853,9 @@ m9_w <- quap(
 
 plot(coeftab(m9_w),by.model=TRUE )
 ```
-As seen in the above plot, bGermlvl becomes independent from corona fear (i.e., the model does with almost no uncertainty estimate the coefficient bGermlvl to be very close to zero) when stratifying by sanitizing and social exposure.
 
-Wrong Model 10: enrg _||_ sntz | grm_ # OBS: WRONG
-Testing whether the causal coefficient for sanitizing becomes significantly close to zero when stratifying by germ level in a model that has energy level as outcome variable.
+Wrong Model 10: enrg _||_ sntz | grm_ 
+*Testing whether the causal coefficient for sanitizing becomes significantly close to zero when stratifying by germ level in a model that has energy level as outcome variable.*
 ```{R} 
 m10_w <- quap(
     alist(
@@ -873,10 +869,10 @@ m10_w <- quap(
 
 plot(coeftab(m10_w),by.model=TRUE)
 ```
-As seen in the above plot, bSanitizing does not become independent from energy level when stratifying by germ level. This violates one of the listed conditional independencies and tells us that our DAG is not compatible with "the wrong data".
+*As seen in the above plot, bSanitizing does not become independent from energy level when stratifying by germ level. This violates one of the implictions listed conditional independencies and tells us that our DAG is not compatible with the wrong data we just simulated. *
 
 Wrong Model 11:  enrg _||_ scl_ | grm_
-Testing whether the causal coefficient for social exposure becomes significantly close to zero when stratifying by germ level in a model that has energy level as outcome variable.
+*Testing whether the causal coefficient for social exposure becomes significantly close to zero when stratifying by germ level in a model that has energy level as outcome variable.*
 ```{R} 
 m11_w <- quap(
     alist(
@@ -890,11 +886,11 @@ m11_w <- quap(
 
 plot(coeftab(m11_w),by.model=TRUE)
 ```
-As seen in the above plot, bSocial_exp does not become independent from energy level when stratifying by germ level. This violates one of the listed conditional independencies and tells us that our DAG is not compatible with "the wrong data".
+*As seen in the above plot, bSocial_exp does not become independent from energy level when stratifying by germ level. This again violates one of the implictions listed conditional independencies and tells us that our DAG is not compatible with the wrong data we just simulated. *
 
 
 Model 12: sntz _||_ scl_ | crn_
-Testing whether the causal coefficient for social exposure becomes significantly close to zero when stratifying by corona fear in a model that has sanitizing as outcome variable.
+*Testing whether the causal coefficient for social exposure becomes significantly close to zero when stratifying by corona fear in a model that has sanitizing as outcome variable.*
 ```{R} 
 m12 <- quap(
     alist(
@@ -908,6 +904,8 @@ m12 <- quap(
 
 plot(coeftab(m12),by.model=TRUE)
 ```
-As seen in the above plot, bSocial_exp does not become independent from sanitizing when stratifying by germ level. This violates one of the listed conditional independencies and tells us that our DAG is not compatible with "the wrong data".
+*As seen in the above plot, bSocial_exp does not become independent from sanitizing when stratifying by germ level. This violates one of the implictions listed conditional independencies and tells us that our DAG is not compatible with the wrong data we just simulated. *
 
+
+*In summary, model 10, 11, and 12 does not fit the data we deliberately simulated to not fit our DAG.*
 
