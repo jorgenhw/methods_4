@@ -47,15 +47,22 @@ two variables (an outcome and a predictor) that you would like to
 investigate the relation between. If in doubt, you **can be inspired by
 Peter's amazing example** on the next page.
 
-*In our example, we wish to investigate the effect of the predictor corona fear (CF) on*
-*the outcome variable energy level (continuous).*
+*In our example, we wish to investigate the effect of the continuous predictor corona fear (CF) on*
+*the outcome variable energy level (also continuous).*
 
-*Predictor: corona fear (continuous variable)* 
-*Outcome variable: energy level (continuous variable), depends on germ level as germs gobble up nutrients and energy.*
-*Sanitizing: continuous variable (count variable)* 
-*Social exposure: a measure of how much social mingling you engage in (social circle size, social activities etc.)* 
-*Germ level: the level of vira germs in your body. We have no biological evidence for a variable of this type, but for the sake of simplicity we assumes that the level of germs present in your body can be describes as a normally distributed continuous variable*
-*OCD: someonnes level of OCD. Treated as a continous variable for the sake of this assignment.*
+*Predictor: corona fear (continuous variable). This variable depends on OCD, as we expect OCD to affect your corona fear in such way that a higher level of OCD increases your level of corona fear.* 
+
+*Outcome variable: energy level (continuous variable), depends on germ level as we expect the level of germs to determine your energy level. With a low level of germs, the germs will not take up much energy and nutrients from your body, but with a higher number of germs in your system, the germs will take more nutrients and energy.* 
+
+*OCD: someone's level of OCD describes as a continuous variable for the sake of this assignment. This variable is independent from all other variables in our DAG but acts as a common cause of corona fear and sanitizing*.
+
+*Sanitizing: a continuous variable dependent on both corona fear and OCD. It is dependent on corona fear as we expect that you will sanitize more as your fear of corona increases. It is dependent on OCD as a typical symptom of OCD is an abnormal fear of germs, which we assume will result in highly frequent use of sanitizer. Thus, we assume that the amount of sanitizing will increase with the level of OCD*.
+
+*Social exposure: a measure of how much social mingling you engage in (a combined measure of social circle size, social activities etc.). This variable is also dependent on corona fear, as we assume that a person who is really scared of Corona would isolate more and thus have a much lower social exposure, whereas a person who didn't fear corona at all wouldn't worry about meeting people and thus have a correspondingly larger social exposure.*
+
+*Germ level: a continuous variable describing the level of vira germs in your body. For the sake of simplicity, we assume that the level of germs present in your body can be described as a normally distributed continuous variable. This variable is dependent on the social exposure variable as well as sanitizing. It depends on social exposure, as a lot of social exposure implies more exposure to germs. It depends on sanitizing as sanitizing works by killing most germs, preventing them from entering your body*. 
+
+
 
 \- **Make a DAG** for the phenomenon. Make it medium complicated: that
 means, make sure there are some different kinds of relations (see next
@@ -67,8 +74,6 @@ steps.\
 
 
 ```{r}
-
-# Twisted DAG corona
 
 dag_corona <- dagitty( "dag {
     corona_fear -> sanitizing
@@ -94,50 +99,41 @@ forks, pipes, colliders, and their descendants).
 
 Pipe
 
-(SE -\> GERM LEVEL -\> energylvl)
+(Corona Fear --\> Social Exposure --\> Germ Level)
 
-(Cf --\> SE --\> GERM)
+(Corona Fear -\> Sanitizing -\> Germ Level)
 
-(CF -\> SAN -\> GERM)
+(OCD --\> Corona Fear --\> Social Exposure)   
 
-(S --\> GERM --\> energylvl)
+(OCD --\> Corona Fear --\> Sanitizing)   
 
-(OCD --\> CF --\> SE)   
+(OCD --\> Sanitizing --\> Germ Level)
 
-(OCD --\> SAN --\> GERM LEVEL)
+(Sanitizing --\> Germ Level --\> EnergyLevel)
+
+(Social Exposure -\> Germ Level -\> Energy Level)
+
 
 Fork
 
-(SAN \<- CF -\> SE)
+(Sanitizing \<- Corona Fear -\> Social Exposure)
 
-(CF \<- OCD -\> SAN)
+(Corona Fear \<- OCD -\> Sanitizing)
+
+
 
 Collider
 
-(SAN -\> GERM LEVEL \<- SE)
+(Sanitizing -\> Germ Level \<- Social Exposure)
 
-(CF-\> SAN \<- OCD)
+(Corona Fear-\> Sanitizing \<- OCD)
+
 
 Descendant 
 
-(OCD --\> CF --\> SE, CF --\> SAN )
+(OCD --\> Corona Fear --\> Social Exposure, Corona Fear --\> Sanitizing )
 
-*We expect OCD to affect your corona fear in such way that a higher level of OCD increase the level of corona fear.* 
 
-*A typical symptom of OCD is an abnormal fear of germs, which results in highly frequent use of sanitizer. Thus, we assume that the amount of sanitizing will increase with the level of OCD*.
-
-*We expect the variable SE to depend on your corona fear, as we assume that a person who is really scared of COVID would have a much lower social exposure, whereas a person who didn't fear corona at all would have a correspondingly larger social exposure*-
-
-*The same goes for the relation between corona fear and sanitizing. We expect a person with a high corona fear to have a much higher*
-*daily frequency of sanitizing than a person with no corona fear at all*.
-
-*We would expect germ level to depend on your social exposure, as a lot of social exposure implies more exposure to germs.* 
-
-*The same goes for the relation between germ level and sanitizing, as*
-*sanitizing works by killing most germs, preventing them from entering your body*
-
-*Lastly, we expect the level of germs to determine your energy level. With a low level of germs,*
-*the germs will not take up much energy from your body, but with a higher number of germs in your system, the germs will take more energy* 
 
 \- Find out **what variables to include (and not include)** in a
 multiple linear regression to avoid 'back door' (AKA non-causal) paths.
@@ -149,7 +145,7 @@ function `adjustmentSets()`.
 adjustmentSets(dag_corona,exposure="corona_fear", outcome="energylvl")
 ```
 
-OCD is a backdoor that we should control for (i.e., include in a our model) in order to find the full causal effect of corona fear on energylvl. 
+*OCD is a backdoor that we should control for (i.e., include in a our model) in order to find the full causal effect of corona fear on energy level.* 
 
 
 \- Find out which **conditional independencies** the DAG implies. First
@@ -161,21 +157,8 @@ with the mind, then with daggity's function
 # Deriving our DAG’s conditional independencies
 impliedConditionalIndependencies(dag_corona)
 ```
-   
-  OCD _||_ enrg | grm_
-  OCD _||_ enrg | sntz, scl_
-  OCD _||_ enrg | crn_, sntz
-  OCD _||_ grm_ | sntz, scl_
-  OCD _||_ grm_ | crn_, sntz
-  OCD _||_ scl_ | crn_
-  crn_ _||_ enrg | grm_ 
-  crn_ _||_ enrg | sntz, scl_
-  crn_ _||_ grm_ | sntz, scl_
-  enrg _||_ sntz | grm_ 
-  enrg _||_ scl_ | grm_
-  sntz _||_ scl_ | crn_
 
-The above shows the testable implications of our DAG, which we will go through in task 3 to test if any of them can be falsified - i.e. to know if the DAG is compatible with the data. If any of the conditional independencies are not fulfilled, we can falsify our DAG.      
+*The above output shows the testable implications of our DAG, which we will go through in task 3 to test if any of them can be falsified - i.e. to know if the DAG is compatible with the data. If any of the conditional independencies are not fulfilled, we can falsify our DAG. *     
 
 
 \- Find the full list of **Markov equivalent** DAGS. Use daggity's
@@ -184,12 +167,13 @@ function `equivalentGraphs()`.
 The equivalentGraphs() function outputs a set of DAGs with the same
 conditional independencies is known as a Markov equivalence set.
 
-The list outputted allow show us 8 DAGS that would have the exact same
-conditional independencies as our dag_corona has.
-
 ```{r}
 equivalentDAGs(dag_corona)
 ```
+
+*The list outputted above shows us 8 DAGS that would have the exact same conditional independencies as our DAG, dag_corona, has. However, many of the causal relations between variables in the DAGs listed above would be incompatible with our scientific knowledge and we would have no reason to build statistical models based on these DAGs. For instance, we would have no reason to asumme that sanitizing will have a causal effect on OCD, as suggested by e.g. DAG 3, 6, 7, and 8 above.*
+
+
 
 ## Task 2: The data
 
@@ -199,31 +183,47 @@ distribution which has another variable as mean. McElreath does this in
 the book a few times, and you can use this as inspiration.
 
 ```{r}
-
 set.seed(3)
 N = 1000
+```
 
-# Simulating variables:
 
+Simulating variables
+```{r}
 # OCD
 OCD <- rnorm(N, mean=5, sd =1)
-  
-# Corona fear (assuming that it is normally distributed and dependent on OCD)
+hist(OCD)
+```
+
+
+```{r}
+# Corona fear
 corona_fear <- rnorm(N, mean=20+(10*OCD), sd=4) 
-#hist(corona_fear)
+hist(corona_fear)
+```
 
-# Social exposure (is dependent on corona_fear)
+
+```{r}
+# Social exposure 
 social_exposure <- rnorm(N, mean= (35-(corona_fear/3)), sd= 1) #
-plot(corona_fear,social_exposure)
+plot(corona_fear,social_exposure, main="Plot: corona fear and social exposure")
+```
 
-# Sanitizing (is dependent on corona_fear and OCD)
+
+```{r}
+# Sanitizing 
 sanitizing <-  rnorm(N, mean= (corona_fear-8)+(OCD*2), sd=2)
 hist(sanitizing)
+```
 
-# Germ level (is dependent on both sanitizing & whether you wear face mask or not)
+```{r}
+# Germ level 
 germ_level <-  rnorm(N, mean= 8000 - ((sanitizing*60)+(100*social_exposure)), sd=100)
 hist(germ_level)
+```
 
+
+```{r}
 # Probability of being energylvl (depends on your germ level)
 energylvl <-rnorm(N, mean=80-((germ_level/100)), sd=6) 
 hist(energylvl)
