@@ -385,12 +385,9 @@ plot(coeftab(m4),by.model=TRUE)
 
 
 Model 5: OCD || grm_ | crn_, sntz
-
 *Testing the implication that causal coefficient of germ level becomes significantly close to zero when stratifying by corona fear and sanitizing in a model that has OCD as outcome variable.*
 
 ```{r}
-
-# OBS: violated? 
 
 adjustmentSets(dag_corona,exposure="germ_level", outcome="OCD") # { corona_fear, sanitizing }
 
@@ -409,22 +406,18 @@ precis(m5)
 plot(coeftab(m5),by.model=TRUE)
 
 ```
-*As seen in the above plot, germ level becomes independent from OCD (i.e., the model estimates the coefficient bGerm to be very close to zero when stratifying by sanitizing, and corona fear.*
+*As seen in the above plot, germ level becomes independent from OCD (i.e., the model estimates the coefficient bGerm to be very close to zero (-.02) when stratifying by sanitizing, and corona fear.*
 
-*The plot above shows the posterior mean for our model's parameters sigma, bCoronaFear, bSanitizing, bGermLevel and our intercept, alpha (a). The posterior means are shown by the points and the 89% compatibility intervals are shown by the solid horizontal lines. We can interpret the posterior mean of the parameter bGermLevel as: once we know sanitizing and corona fear, there is very little additional predictive power in also knowing the person's germ level.* 
+*The plot above shows the posterior mean for our model's parameters sigma, bCoronaFear, bSanitizing, bGerm and our intercept, alpha (a). The posterior means are shown by the points and the 89% compatibility intervals are shown by the solid horizontal lines. We can interpret the posterior mean of the parameter bGerm as: once we know sanitizing and corona fear, there is very little additional predictive power in also knowing the person's germ level.* 
 
-*The posterior mean for germ level (bGermLevel) is very close to 0 (.05 with very little probability of both sides of zero. This does not violate the implication that germ level becomes independent from OCD when stratifying by sanitizing and corona fear.*
-
-
+*The posterior mean for germ level (bGerm) is very close to 0 (-.02) with very little probability of both sides of zero. This does not violate the implication that germ level becomes independent from OCD when stratifying by sanitizing and corona fear.*
 
 
-
-
-Model 6:OCD || scl_ | crn_
-Testing whether the causal coefficient of social exposure becomes significantly close to zero when stratifying by corona fear in a model that has OCD as outcome variable.
+Model 6:   OCD || scl_ | crn_
+*Testing the implication that the causal coefficient of social exposure becomes significantly close to zero when stratifying by corona fear in a model that has OCD as outcome variable.*
 
 ```{r}
-adjustmentSets(dag_corona,exposure="social_exposure", outcome="OCD") #OCD _||_ scl_ | crn_
+adjustmentSets(dag_corona,exposure="social_exposure", outcome="OCD") # { corona_fear }
 
 m6<- quap(
     alist(
@@ -436,10 +429,18 @@ m6<- quap(
         sigma ~ dexp( 1 )
     ) , data = df )
 
+precis(m6)
 plot(coeftab(m6),by.model=TRUE)
 ```
 
 As seen in the above plot, social exposure becomes independent from OCD (i.e., the model does with almost no uncertainty estimate the coefficient bSoExp (social exposure) to be very close to zero) when stratifying by corona fear. 
+
+*As seen in the above plot, social exposure becomes independent from OCD (i.e., the model estimates the coefficient bSoExp to be very close to zero (.05) when stratifying by corona fear.*
+
+*The plot above shows the posterior mean for our model's parameters sigma, bSoExp, bCorona_fear and our intercept, alpha (a). The posterior means are shown by the points and the 89% compatibility intervals are shown by the solid horizontal lines. We can interpret the posterior mean of the parameter bSoExp as: once we know a person's corona fear, there is very little additional predictive power in also knowing the person's social exposure.* 
+
+*The posterior mean for social exposure (bSoExp) is very close to 0 (.05) with very little probability of both sides of zero. This does not violate the implication that social exposure becomes independent from OCD when stratifying by corona fear.*
+
 
 
 Model 7: crn_ || enrg | grm_
